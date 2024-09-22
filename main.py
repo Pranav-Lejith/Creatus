@@ -8,9 +8,79 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
 import zipfile
 from io import BytesIO
-st.set_page_config(page_title="Creatus",page_icon='🤖',menu_items={
-        'About': "# :red[Creator]:blue[:] :violet[Pranav Lejith(:green[Amphibiar])]",
-    })
+import time
+
+# Set page config
+st.set_page_config(page_title="Creatus", page_icon='logo.png', menu_items={
+    'About': "# :red[Creator]:blue[:] :violet[Pranav Lejith(:green[Amphibiar])]",
+})
+splash = st.empty()
+
+# Custom HTML for splash screen with a non-blinking cursor
+splash_html = """
+    <style>
+    .typewriter h1 {
+      overflow: hidden;
+      white-space: nowrap;
+      margin: 0 auto;
+      letter-spacing: .15em;
+      border-right: .15em solid orange;
+      animation: typing 3.5s steps(30, end), stop-cursor 0.75s steps(1, end) forwards;
+    }
+    
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+    
+    @keyframes stop-cursor {
+      from { border-color: orange; }
+      to { border-color: transparent; }
+    }
+    </style>
+    <div class="typewriter">
+        <h1>Creatus</h1>
+    </div>
+"""
+
+splash.markdown(splash_html, unsafe_allow_html=True)
+
+# Add a small delay for the splash screen
+time.sleep(1)
+
+# Clear the splash screen
+splash.empty()
+
+# Custom HTML for the main title (typewriter effect)
+main_title_html = """
+    <style>
+    .main-typewriter h1 {
+      overflow: hidden;
+      white-space: nowrap;
+      margin: 0 auto;
+      color: red;
+      letter-spacing: .15em;
+      border-right: .15em solid red;
+      animation: main-typing 4s steps(30, end), stop-main-cursor 0.75s steps(1, end) forwards;
+    }
+
+    @keyframes main-typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+
+    @keyframes stop-main-cursor {
+      from { border-color: red; }
+      to { border-color: transparent; }
+    }
+    </style>
+    <div class="main-typewriter">
+        <h1>Creatus (Model Creator)</h1>
+    </div>
+"""
+
+# Display the main title with typewriter effect
+st.markdown(main_title_html, unsafe_allow_html=True)
 
 # Initialize session state keys
 if 'labels' not in st.session_state:
@@ -92,9 +162,6 @@ def test_model(model, img_array, label_mapping):
     predicted_label = labels_reverse_map[predicted_label_index]
     return predicted_label, confidence
 
-# Streamlit app
-st.title(":red[Creatus (Model Creator)]")
-
 # Sidebar for label input
 st.sidebar.title(":blue[Manage Labels]")
 if 'label_input' not in st.session_state:
@@ -149,11 +216,12 @@ if st.session_state['num_classes'] > 1:
             st.write("Training the model...")
             progress_bar = st.progress(0)  # Initialize progress bar
             st.session_state['model'] = train_model(all_images, all_labels, st.session_state['num_classes'], epochs, progress_bar)
+            st.toast('Model Trained Successfully')
             st.success("Model trained!")
         else:
             st.error("Please upload some images before training.")
 else:
-    st.warning("At least two labels are required to train the model.")
+    st.warning("At least two labels are required to train the  model.")
 
 # Option to test the trained model
 if st.session_state['model'] is not None:
@@ -181,70 +249,55 @@ if st.session_state['model'] is not None and st.button("Download Model"):
         
         if export_format == 'tflite':
             usage_code = f"""
-```python
 import tensorflow as tf
-from tensorflow.keras.preprocessing import image
 import numpy as np
 
 # Load the model
-interpreter = tf.lite.Interpreter(model_path='model.tflite')
+interpreter = tf.lite.Interpreter(model_path="model.tflite")
 interpreter.allocate_tensors()
 
-# Load and preprocess the image
-img = image.load_img('path/to/your/image.jpg', target_size=(64, 64))
-img_array = image.img_to_array(img)
-img_array = np.expand_dims(img_array, axis=0) / 255.0
-
-# Get input and output tensors
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-# Make a prediction
-interpreter.set_tensor(input_details[0]['index'], img_array)
-interpreter.invoke()
-predictions = interpreter.get_tensor(output_details[0]['index'])
+# Prepare the image (adjust this for your actual input)
+img = np.random.rand(1, 64, 64, 3).astype(np.float32)
 
-# Get the predicted label
-predicted_label_index = np.argmax(predictions)
-labels = [{predicted_label_code}]
-predicted_label = labels[predicted_label_index]
-print(f"Predicted label: {{predicted_label}}")
+# Test the model
+interpreter.set_tensor(input_details[0]['index'], img)
+interpreter.invoke()
+
+output = interpreter.get_tensor(output_details[0]['index'])
+predicted_label = np.argmax(output)
+predicted_label_code = [{predicted_label_code}]
+print(f"Predicted Label: {{predicted_label_code[predicted_label]}}")
 """
-        else:
+        elif export_format == 'h5':
             usage_code = f"""
-```python
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-import numpy as np
+import tensorflow as tf
 
 # Load the model
-model = load_model('model.h5')
+model = tf.keras.models.load_model('model.h5')
 
-# Load and preprocess the image
-img = image.load_img('path/to/your/image.jpg', target_size=(64, 64))
-img_array = image.img_to_array(img)
-img_array = np.expand_dims(img_array, axis=0) / 255.0
+# Prepare the image (adjust this for your actual input)
+img = np.random.rand(1, 64, 64, 3)
 
-# Make a prediction
-predictions = model.predict(img_array)
-
-# Get the predicted label
-predicted_label_index = np.argmax(predictions)
-labels = [{predicted_label_code}]
-predicted_label = labels[predicted_label_index]
-print(f"Predicted label: {{predicted_label}}")
+# Test the model
+prediction = model.predict(img)
+predicted_label = np.argmax(prediction)
+predicted_label_code = [{predicted_label_code}]
+print(f"Predicted Label: {{predicted_label_code[predicted_label]}}")
 """
+        
         buffer = save_model(st.session_state['model'], export_format, usage_code)
-
-        # Save the model to a zip file in memory
+        
         st.download_button(
-            label="Download Model with Usage Code",
+            label="Download the trained model and usage code",
             data=buffer,
-            file_name="model.zip",
+            file_name=f"trained_model_{export_format}.zip",
             mime="application/zip"
         )
     except Exception as e:
-        st.error("An error occurred while preparing the model for download.")
+        st.error(f"Error: {e}")
 st.sidebar.write("This app was created by :red[Pranav Lejith](:violet[Amphibiar])")
 st.sidebar.subheader(":orange[Usage Instructions]")
 st.sidebar.write(""" 
