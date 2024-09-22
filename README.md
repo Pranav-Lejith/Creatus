@@ -41,4 +41,5 @@ Creatus was created by **Pranav Lejith** (Amphibiar).
 
 ---
 
-Explore Creatus at [creatus.streamlit.app](https://creatus.streamlit.app) and start building your custom AI models today!
+Explore Creatus at [creatus.streamlit.app](https://creatus.streamlit.app)
+Thankyou.
