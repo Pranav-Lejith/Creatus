@@ -42,4 +42,4 @@ Creatus was created by **Pranav Lejith** (Amphibiar).
 ---
 
 Explore Creatus at [creatus.streamlit.app](https://creatus.streamlit.app)
-Thankyou.
+
