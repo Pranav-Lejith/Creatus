@@ -4,3 +4,5 @@ numpy
 Pillow
 scikit-learn
 matplotlib
+sounddevice
+librosa
