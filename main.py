@@ -10,6 +10,8 @@ import zipfile
 from io import BytesIO
 import time
 import matplotlib.pyplot as plt
+import sounddevice as sd
+import librosa
 
 # Set page config
 st.set_page_config(
@@ -19,34 +21,34 @@ st.set_page_config(
         'About': "# :red[Creator]:blue[:] :violet[Pranav Lejith(:green[Amphibiar])]",
     },
     layout='wide',
-    initial_sidebar_state='collapsed'  # Start with sidebar collapsed
+    initial_sidebar_state='collapsed'
 )
 
-# Function to hide sidebar
-def hide_sidebar():
-    st.markdown(
-        """
-        <style>
-        .css-1544g2n.e1fqkh3o4 {
-            display: none;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+# Load the voice classification model
+interpreter = tf.lite.Interpreter(model_path="voice-model.tflite")
+interpreter.allocate_tensors()
 
-# Function to show sidebar
-def show_sidebar():
-    st.markdown(
-        """
-        <style>
-        .css-1544g2n.e1fqkh3o4 {
-            display: block;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
+# Function to process audio and make prediction
+def classify_voice(audio):
+    mfccs = librosa.feature.mfcc(y=audio, sr=22050, n_mfcc=13)
+    mfccs_processed = np.mean(mfccs.T, axis=0)
+    
+    input_data = np.expand_dims(mfccs_processed, axis=0).astype(np.float32)
+    
+    interpreter.set_tensor(input_details[0]['index'], input_data)
+    interpreter.invoke()
+    output_data = interpreter.get_tensor(output_details[0]['index'])
+    
+    return "Pranav" if output_data[0][1] > output_data[0][0] else "Background Noise"
+
+# Function to capture audio
+def record_audio(duration=5, sample_rate=22050):
+    audio = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1)
+    sd.wait()
+    return audio.flatten()
 
 # Initialize session state keys
 if 'labels' not in st.session_state:
@@ -63,8 +65,8 @@ if 'show_developer_splash' not in st.session_state:
     st.session_state['show_developer_splash'] = False
 if 'initial_load' not in st.session_state:
     st.session_state['initial_load'] = True
-if 'show_password_input' not in st.session_state:
-    st.session_state['show_password_input'] = False
+if 'show_voice_verification' not in st.session_state:
+    st.session_state['show_voice_verification'] = False
 
 # Developer authentication (hidden from normal users)
 developer_commands = [
@@ -72,7 +74,7 @@ developer_commands = [
     'command override-amphibiar', 'command override-amphibiar23', 
     'control override-amphibiar', 'system override-amphibiar', 'user:amphibiar',
     'user:amphibiar-developer', 'user:amphibiar-admin', 'user:amphibiar-root',
-    'control-admin', 'control-amphibiar','inititate override-amphibiar','currentuser:amphibiar',
+    'control-admin', 'control-amphibiar','initiate override-amphibiar','currentuser:amphibiar',
     'initiate control override', 'initiate control','switch control'
 ]
 
@@ -115,7 +117,7 @@ def main_content():
     label_input = st.sidebar.text_input("Enter a new label:")
     if st.sidebar.button("Add Label"):
         if label_input in developer_commands:
-            st.session_state['show_password_input'] = True
+            st.session_state['show_voice_verification'] = True
         elif label_input and label_input not in st.session_state['labels']:
             st.session_state['labels'][label_input] = []
             st.session_state['num_classes'] += 1
@@ -123,19 +125,22 @@ def main_content():
         else:
             st.sidebar.warning("Label already exists or is empty.")
 
-    # Password input for developer mode
-    if st.session_state['show_password_input']:
-        password = st.sidebar.text_input("Enter developer password:", type="password")
-        if st.sidebar.button("Submit"):
-            if password == 'epsilon':
+    # Voice verification for developer mode
+    if st.session_state['show_voice_verification']:
+        st.sidebar.write("Please speak for voice verification.")
+        if st.sidebar.button("Start Voice Verification"):
+            st.sidebar.info("Recording... Please speak now.")
+            audio = record_audio()
+            st.sidebar.info("Processing...")
+            result = classify_voice(audio)
+            if result == "Pranav":
                 st.session_state['is_developer'] = True
                 st.session_state['show_developer_splash'] = True
-                st.session_state['show_password_input'] = False
-                # st.experimental_rerun()
-                
+                st.session_state['show_voice_verification'] = False
+                st.sidebar.success("Voice verified. Developer mode activated.")
             else:
-                st.sidebar.error("Incorrect password. Developer mode not activated.")
-                st.session_state['show_password_input'] = False
+                st.sidebar.error("Voice verification failed. Developer mode not activated.")
+                st.session_state['show_voice_verification'] = False
 
     # Display labels with delete buttons
     st.sidebar.subheader("Existing Labels")
@@ -438,7 +443,7 @@ def main_content():
     Batch size is the number of samples that you feed into your model at each iteration of the training process. It determines how often you update the model parameters based on the gradient of the loss function. A larger batch size means more data per update, but also more memory and computation requirements.
     
     **:orange[Epochs]**:
-    An epoch is when all the training data is used at once and is defined as the total number of iterations of all the training data in one cycle for training the machine learning model. Another way to define an epoch is the number of passes a training dataset takes around an algorithm
+    An epoch is when all the training data is used at once and is defined as the total number of iterations of all the training data in one cycle for training the machine learning model. Another way to define an epoch is the number of passes a training dataset takes around an algorithm.
     
     **:violet[Learning Rate]**:
     Learning rate refers to the strength by which newly acquired information overrides old information. It determines how much importance is given to recent information compared to previous information during the learning process.
@@ -447,7 +452,7 @@ def main_content():
     if st.session_state['is_developer']:
         if st.sidebar.button("Reset to Normal User", key="reset_button"):
             st.session_state['is_developer'] = False
-            # st.experimental_rerun()
+            st.experimental_rerun()
 
 # Define a function to train the model with progress
 def train_model(images, labels, num_classes, epochs, progress_bar, **kwargs):
@@ -609,36 +614,21 @@ def test_model(model, img_array, label_mapping):
 
 # Main app logic
 if st.session_state['initial_load']:
-    hide_sidebar()
     splash = st.empty()
     splash.markdown(create_splash_html("Creatus", '#48CFCB'), unsafe_allow_html=True)
-    time.sleep(1)
+    time.sleep(4)
     splash.empty()
-    show_sidebar()
     st.session_state['initial_load'] = False
     main_content()
 elif st.session_state['show_developer_splash']:
-    hide_sidebar()
-    # Create a container for the entire app content
-    app_container = st.empty()
-    
+    # Clear the entire screen
+    st.empty()
     # Show only the developer splash
     dev_splash = st.empty()
     dev_splash.markdown(create_splash_html("Welcome , Amphibiar (Developer)", 'red'), unsafe_allow_html=True)
-    
-    # Wait for the typing animation to complete (adjust the sleep time if needed)
     time.sleep(4)
-    
-    # Clear the developer splash
     dev_splash.empty()
-    
-    # Reset the developer splash flag
     st.session_state['show_developer_splash'] = False
-    
-    show_sidebar()
-    
-    # Show the main content
-    with app_container.container():
-        main_content()
+    main_content()
 else:
     main_content()
