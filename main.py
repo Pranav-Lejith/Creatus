@@ -115,7 +115,7 @@ def main_content():
         if col2.button("Delete", key=f"delete_{label}"):
             del st.session_state['labels'][label]
             st.session_state['num_classes'] -= 1
-            st.experimental_rerun()
+            # st.experimental_rerun()
 
     # Dropdown to select model export format
     export_format = st.sidebar.selectbox("Select model export format:", options=["tflite", "h5"])
