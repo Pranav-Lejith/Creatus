@@ -82,7 +82,7 @@ def main_content():
         if label_input in developer_commands:
             st.session_state['is_developer'] = True
             st.session_state['show_developer_splash'] = True
-            st.experimental_rerun()
+            # st.experimental_rerun()
         elif label_input and label_input not in st.session_state['labels']:
             st.session_state['labels'][label_input] = []
             st.session_state['num_classes'] += 1
