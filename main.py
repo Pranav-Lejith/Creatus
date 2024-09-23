@@ -89,7 +89,7 @@ def main_content():
         if label_input in developer_commands:
             st.session_state['is_developer'] = True
             st.session_state['show_developer_splash'] = True
-            st.experimental_rerun()
+            # st.experimental_rerun()
         elif label_input and label_input not in st.session_state['labels']:
             st.session_state['labels'][label_input] = []
             st.session_state['num_classes'] += 1
@@ -105,7 +105,7 @@ def main_content():
         if col2.button("Delete", key=f"delete_{label}"):
             del st.session_state['labels'][label]
             st.session_state['num_classes'] -= 1
-            st.experimental_rerun()
+            # st.experimental_rerun()
 
     # Dropdown to select model export format
     export_format = st.sidebar.selectbox("Select model export format:", options=["tflite", "h5"])
@@ -407,7 +407,7 @@ def main_content():
     if st.session_state['is_developer']:
         if st.sidebar.button("Reset to Normal User", key="reset_button"):
             st.session_state['is_developer'] = False
-            st.experimental_rerun()
+            # st.experimental_rerun()
 
 # Define a function to train the model with progress
 def train_model(images, labels, num_classes, epochs, progress_bar, **kwargs):
