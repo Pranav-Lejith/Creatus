@@ -131,7 +131,8 @@ def main_content():
                 st.session_state['is_developer'] = True
                 st.session_state['show_developer_splash'] = True
                 st.session_state['show_password_input'] = False
-                st.experimental_rerun()
+                # st.experimental_rerun()
+                
             else:
                 st.sidebar.error("Incorrect password. Developer mode not activated.")
                 st.session_state['show_password_input'] = False
@@ -446,7 +447,7 @@ def main_content():
     if st.session_state['is_developer']:
         if st.sidebar.button("Reset to Normal User", key="reset_button"):
             st.session_state['is_developer'] = False
-            st.experimental_rerun()
+            # st.experimental_rerun()
 
 # Define a function to train the model with progress
 def train_model(images, labels, num_classes, epochs, progress_bar, **kwargs):
