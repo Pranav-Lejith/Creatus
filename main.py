@@ -10,8 +10,6 @@ import zipfile
 from io import BytesIO
 import time
 import matplotlib.pyplot as plt
-import sounddevice as sd
-import librosa
 
 # Set page config
 st.set_page_config(
@@ -23,32 +21,6 @@ st.set_page_config(
     layout='wide',
     initial_sidebar_state='collapsed'
 )
-
-# Load the voice classification model
-interpreter = tf.lite.Interpreter(model_path="voice-model.tflite")
-interpreter.allocate_tensors()
-
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-
-# Function to process audio and make prediction
-def classify_voice(audio):
-    mfccs = librosa.feature.mfcc(y=audio, sr=22050, n_mfcc=13)
-    mfccs_processed = np.mean(mfccs.T, axis=0)
-    
-    input_data = np.expand_dims(mfccs_processed, axis=0).astype(np.float32)
-    
-    interpreter.set_tensor(input_details[0]['index'], input_data)
-    interpreter.invoke()
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-    
-    return "Pranav" if output_data[0][1] > output_data[0][0] else "Background Noise"
-
-# Function to capture audio
-def record_audio(duration=5, sample_rate=22050):
-    audio = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1)
-    sd.wait()
-    return audio.flatten()
 
 # Initialize session state keys
 if 'labels' not in st.session_state:
@@ -65,8 +37,6 @@ if 'show_developer_splash' not in st.session_state:
     st.session_state['show_developer_splash'] = False
 if 'initial_load' not in st.session_state:
     st.session_state['initial_load'] = True
-if 'show_voice_verification' not in st.session_state:
-    st.session_state['show_voice_verification'] = False
 
 # Developer authentication (hidden from normal users)
 developer_commands = [
@@ -117,30 +87,15 @@ def main_content():
     label_input = st.sidebar.text_input("Enter a new label:")
     if st.sidebar.button("Add Label"):
         if label_input in developer_commands:
-            st.session_state['show_voice_verification'] = True
+            st.session_state['is_developer'] = True
+            st.session_state['show_developer_splash'] = True
+            st.experimental_rerun()
         elif label_input and label_input not in st.session_state['labels']:
             st.session_state['labels'][label_input] = []
             st.session_state['num_classes'] += 1
             st.sidebar.success(f"Label '{label_input}' added!")
         else:
             st.sidebar.warning("Label already exists or is empty.")
-
-    # Voice verification for developer mode
-    if st.session_state['show_voice_verification']:
-        st.sidebar.write("Please speak for voice verification.")
-        if st.sidebar.button("Start Voice Verification"):
-            st.sidebar.info("Recording... Please speak now.")
-            audio = record_audio()
-            st.sidebar.info("Processing...")
-            result = classify_voice(audio)
-            if result == "Pranav":
-                st.session_state['is_developer'] = True
-                st.session_state['show_developer_splash'] = True
-                st.session_state['show_voice_verification'] = False
-                st.sidebar.success("Voice verified. Developer mode activated.")
-            else:
-                st.sidebar.error("Voice verification failed. Developer mode not activated.")
-                st.session_state['show_voice_verification'] = False
 
     # Display labels with delete buttons
     st.sidebar.subheader("Existing Labels")
